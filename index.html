@@ -1,211 +1,270 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Planejamento Alimentar</title>
-  <meta name="theme-color" content="#4CAF50" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="theme-color" content="#4CAF50">
+  <link rel="manifest" href="manifest.json">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --green: #4CAF50;
-      --green-dark: #388E3C;
-      --green-light: #E8F5E9;
-      --gray: #F5F5F5;
-      --gray-mid: #9E9E9E;
-      --text: #212121;
-      --text-light: #757575;
-      --white: #fff;
-      --radius: 12px;
-      --shadow: 0 2px 8px rgba(0,0,0,0.10);
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green:#4CAF50;--green-dk:#388E3C;--green-lt:#E8F5E9;
+      --blue:#2196F3;--blue-lt:#E3F2FD;
+      --gray:#F5F5F5;--gray-mid:#9E9E9E;
+      --text:#212121;--text-lt:#757575;--white:#fff;
+      --radius:12px;--shadow:0 2px 8px rgba(0,0,0,.10);
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--gray);
-      color: var(--text);
-      min-height: 100vh;
-      padding-bottom: 72px;
-    }
-    .header {
-      background: var(--green);
-      color: white;
-      padding: 16px 20px 12px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      box-shadow: var(--shadow);
-    }
-    .header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
-    .header p  { font-size: 13px; opacity: .8; margin-top: 2px; }
-    .bottom-nav {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 64px;
-      background: white;
-      display: flex;
-      border-top: 1px solid #E0E0E0;
-      z-index: 20;
-      box-shadow: 0 -2px 8px rgba(0,0,0,.08);
-    }
-    .nav-btn {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      border: none;
-      background: none;
-      cursor: pointer;
-      color: var(--gray-mid);
-      font-size: 11px;
-      font-weight: 500;
-      transition: color .2s;
-    }
-    .nav-btn.active { color: var(--green); }
-    .nav-btn svg { width: 22px; height: 22px; }
-    .page { display: none; padding: 16px; }
-    .page.active { display: block; }
-    .week-strip {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      scrollbar-width: none;
-      margin-bottom: 16px;
-    }
-    .week-strip::-webkit-scrollbar { display: none; }
-    .day-chip {
-      flex-shrink: 0;
-      width: 48px;
-      border-radius: 24px;
-      border: none;
-      padding: 8px 4px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      background: white;
-      color: var(--text);
-      font-size: 11px;
-      box-shadow: var(--shadow);
-      transition: all .15s;
-    }
-    .day-chip .num { font-size: 17px; font-weight: 700; line-height: 1; }
-    .day-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: transparent; }
-    .day-chip.has-meals .dot { background: var(--green); }
-    .day-chip.selected { background: var(--green); color: white; box-shadow: 0 3px 10px rgba(76,175,80,.4); }
-    .day-chip.today:not(.selected) { border: 2px solid var(--green); }
-    .section-label {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-light);
-      margin-bottom: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .meal-card {
-      background: white;
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      margin-bottom: 10px;
-      box-shadow: var(--shadow);
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-    }
-    .meal-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
-    .meal-body { flex: 1; }
-    .meal-title { font-size: 12px; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
-    .meal-text { font-size: 15px; color: var(--text); min-height: 22px; }
-    .meal-empty { color: #BDBDBD; font-style: italic; }
-    .edit-btn { background: none; border: none; cursor: pointer; color: var(--gray-mid); padding: 4px; border-radius: 6px; transition: color .2s; flex-shrink: 0; }
-    .edit-btn:hover { color: var(--green); }
-    .week-day-block { background: white; border-radius: var(--radius); margin-bottom: 12px; box-shadow: var(--shadow); overflow: hidden; }
-    .week-day-header { background: var(--green); color: white; padding: 10px 16px; font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
-    .week-day-header.today-header { background: var(--green-dark); }
-    .week-day-header .badge { font-size: 10px; background: rgba(255,255,255,.3); padding: 2px 8px; border-radius: 10px; font-weight: 500; }
-    .week-meal-row { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid #F0F0F0; gap: 10px; }
-    .week-meal-row:last-child { border-bottom: none; }
-    .week-meal-label { font-size: 12px; font-weight: 600; color: var(--text-light); width: 80px; flex-shrink: 0; text-transform: uppercase; }
-    .week-meal-value { font-size: 14px; flex: 1; color: var(--text); }
-    .week-meal-empty { color: #BDBDBD; font-style: italic; }
-    .week-edit-btn { background: none; border: none; cursor: pointer; color: var(--gray-mid); padding: 4px; border-radius: 6px; }
-    .week-edit-btn:hover { color: var(--green); }
-    .add-item-row { display: flex; gap: 8px; margin-bottom: 16px; }
-    .add-item-row input { flex: 1; padding: 12px 14px; border: 2px solid #E0E0E0; border-radius: var(--radius); font-size: 15px; outline: none; transition: border-color .2s; background: white; }
-    .add-item-row input:focus { border-color: var(--green); }
-    .add-item-row button { background: var(--green); color: white; border: none; border-radius: var(--radius); padding: 0 18px; font-size: 22px; cursor: pointer; box-shadow: 0 2px 6px rgba(76,175,80,.3); }
-    .shop-list { list-style: none; }
-    .shop-item { background: white; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; }
-    .shop-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--green); background: white; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all .15s; }
-    .shop-check.checked { background: var(--green); border-color: var(--green); }
-    .shop-check.checked::after { content: ''; width: 6px; height: 10px; border: 2px solid white; border-top: none; border-left: none; transform: rotate(45deg) translateY(-1px); display: block; }
-    .shop-text { flex: 1; font-size: 15px; transition: all .2s; }
-    .shop-text.done { text-decoration: line-through; color: var(--text-light); }
-    .shop-delete { background: none; border: none; cursor: pointer; color: #BDBDBD; padding: 4px; font-size: 18px; line-height: 1; border-radius: 6px; }
-    .shop-delete:hover { color: #E53935; }
-    .shop-summary { text-align: center; color: var(--text-light); font-size: 13px; margin-bottom: 12px; }
-    .clear-done-btn { display: block; width: 100%; margin-top: 12px; padding: 10px; background: none; border: 1px solid #E0E0E0; border-radius: var(--radius); color: var(--text-light); font-size: 13px; cursor: pointer; }
-    .clear-done-btn:hover { border-color: #E53935; color: #E53935; }
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .2s; }
-    .modal-overlay.open { opacity: 1; pointer-events: all; }
-    .modal { background: white; border-radius: 20px 20px 0 0; padding: 24px 20px 32px; width: 100%; transform: translateY(100%); transition: transform .25s cubic-bezier(.4,0,.2,1); }
-    .modal-overlay.open .modal { transform: translateY(0); }
-    .modal h2 { font-size: 16px; margin-bottom: 16px; }
-    .modal textarea { width: 100%; padding: 12px 14px; border: 2px solid #E0E0E0; border-radius: var(--radius); font-size: 15px; font-family: inherit; outline: none; transition: border-color .2s; resize: none; }
-    .modal textarea:focus { border-color: var(--green); }
-    .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
-    .modal-cancel { flex: 1; padding: 12px; background: var(--gray); border: none; border-radius: var(--radius); font-size: 15px; cursor: pointer; }
-    .modal-save { flex: 2; padding: 12px; background: var(--green); color: white; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; }
-    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); }
-    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
-    .empty-state p { font-size: 14px; }
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--gray);color:var(--text);min-height:100vh;padding-bottom:72px}
+    .header{background:var(--green);color:white;padding:14px 20px 10px;position:sticky;top:0;z-index:10;box-shadow:var(--shadow)}
+    .header h1{font-size:17px;font-weight:700}
+    .header p{font-size:12px;opacity:.85;margin-top:2px}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:64px;background:white;display:flex;border-top:1px solid #E0E0E0;z-index:20;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+    .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;cursor:pointer;color:var(--gray-mid);font-size:9.5px;font-weight:500;transition:color .2s;padding:0 2px}
+    .nav-btn.active{color:var(--green)}
+    .nav-btn svg{width:20px;height:20px}
+    .page{display:none;padding:16px}
+    .page.active{display:block}
+    .week-strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:16px}
+    .week-strip::-webkit-scrollbar{display:none}
+    .day-chip{flex-shrink:0;width:44px;border-radius:22px;border:none;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;background:white;color:var(--text);font-size:10px;box-shadow:var(--shadow);transition:all .15s}
+    .day-chip .num{font-size:16px;font-weight:700;line-height:1}
+    .day-chip .dot{width:5px;height:5px;border-radius:50%;background:transparent}
+    .day-chip.has-meals .dot{background:var(--green)}
+    .day-chip.selected{background:var(--green);color:white;box-shadow:0 3px 10px rgba(76,175,80,.4)}
+    .day-chip.today:not(.selected){border:2px solid var(--green)}
+    .date-label{font-size:13px;font-weight:700;color:var(--text-lt);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+    .meal-card{background:white;border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;align-items:flex-start;gap:12px}
+    .meal-icon{font-size:24px;flex-shrink:0;margin-top:2px}
+    .meal-body{flex:1}
+    .meal-badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;margin-bottom:6px}
+    .badge-b{background:#FFF8E1;color:#E65100}
+    .badge-l{background:#E8F5E9;color:#1B5E20}
+    .badge-d{background:#EDE7F6;color:#311B92}
+    .meal-text{font-size:15px;color:var(--text);min-height:20px;line-height:1.4}
+    .meal-empty{color:#BDBDBD;font-style:italic}
+    .edit-btn{background:none;border:none;cursor:pointer;color:var(--gray-mid);padding:4px;border-radius:6px;flex-shrink:0}
+    .edit-btn:hover{color:var(--green)}
+    .week-day-block{background:white;border-radius:var(--radius);margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden}
+    .week-day-hd{background:var(--green);color:white;padding:10px 16px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+    .week-day-hd.today-hd{background:var(--green-dk)}
+    .week-day-hd .wbadge{font-size:10px;background:rgba(255,255,255,.3);padding:2px 8px;border-radius:10px;font-weight:500}
+    .week-row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid #F0F0F0;gap:10px}
+    .week-row:last-child{border-bottom:none}
+    .week-label{font-size:12px;font-weight:600;color:var(--text-lt);width:76px;flex-shrink:0;text-transform:uppercase}
+    .week-val{font-size:14px;flex:1;color:var(--text)}
+    .week-empty{color:#BDBDBD;font-style:italic}
+    .week-edit{background:none;border:none;cursor:pointer;color:var(--gray-mid);padding:4px;border-radius:6px}
+    .water-top{text-align:center;padding:24px 20px 12px}
+    .water-ring-wrap{position:relative;width:180px;height:180px;margin:0 auto 16px}
+    .water-ring-wrap svg{transform:rotate(-90deg)}
+    .water-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+    .water-ml-big{font-size:28px;font-weight:700;color:var(--blue)}
+    .water-goal-lbl{font-size:12px;color:var(--text-lt);margin-top:2px}
+    .water-quick{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+    .wq-btn{background:var(--blue-lt);color:var(--blue);border:none;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+    .wq-btn:hover{background:var(--blue);color:white}
+    .water-custom{display:flex;gap:8px;margin:0 16px 16px}
+    .water-custom input{flex:1;padding:10px 14px;border:2px solid #E0E0E0;border-radius:var(--radius);font-size:15px;outline:none}
+    .water-custom input:focus{border-color:var(--blue)}
+    .water-custom button{background:var(--blue);color:white;border:none;border-radius:var(--radius);padding:0 16px;font-size:14px;cursor:pointer;white-space:nowrap}
+    .water-log-card{margin:0 16px;background:white;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .water-log-hd{padding:10px 16px;font-size:12px;font-weight:600;color:var(--text-lt);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #F0F0F0}
+    .water-entry{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid #F5F5F5;gap:10px}
+    .water-entry:last-child{border-bottom:none}
+    .water-entry-ml{font-size:15px;font-weight:600;color:var(--blue);flex:1}
+    .water-entry-time{font-size:12px;color:var(--text-lt)}
+    .water-entry-del{background:none;border:none;cursor:pointer;color:#BDBDBD;font-size:18px;padding:4px}
+    .water-entry-del:hover{color:#E53935}
+    .water-reset{display:block;width:calc(100% - 32px);margin:12px 16px 0;padding:10px;background:none;border:1px solid #E0E0E0;border-radius:var(--radius);color:var(--text-lt);font-size:13px;cursor:pointer}
+    .water-reset:hover{border-color:#E53935;color:#E53935}
+    .recipe-list{list-style:none}
+    .recipe-card{background:white;border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s}
+    .recipe-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.15)}
+    .recipe-emoji{font-size:30px;flex-shrink:0}
+    .recipe-info{flex:1}
+    .recipe-name{font-size:16px;font-weight:600;color:var(--text)}
+    .recipe-meta{font-size:12px;color:var(--text-lt);margin-top:2px}
+    .recipe-arr{color:var(--gray-mid);font-size:22px;line-height:1}
+    .fab{position:fixed;bottom:76px;right:16px;width:52px;height:52px;background:var(--green);color:white;border:none;border-radius:50%;font-size:28px;cursor:pointer;box-shadow:0 4px 12px rgba(76,175,80,.4);display:none;align-items:center;justify-content:center;z-index:30;line-height:1}
+    .recipe-detail{position:fixed;inset:0;background:var(--gray);z-index:50;display:none;flex-direction:column;overflow-y:auto}
+    .recipe-detail.open{display:flex}
+    .recipe-dh{background:var(--green);color:white;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5}
+    .recipe-dh h2{flex:1;font-size:16px;font-weight:700}
+    .r-back,.r-save{background:rgba(255,255,255,.2);border:none;color:white;padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer}
+    .recipe-dbody{padding:16px;flex:1}
+    .r-field{background:white;border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+    .r-field label{font-size:11px;font-weight:700;color:var(--text-lt);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px}
+    .r-field input,.r-field textarea{width:100%;border:none;outline:none;font-size:15px;font-family:inherit;color:var(--text);resize:none;background:transparent}
+    .r-field input.big{font-size:18px;font-weight:600}
+    .r-field textarea{min-height:80px;line-height:1.5}
+    .r-del{display:block;width:100%;padding:12px;background:none;border:1px solid #FFCDD2;border-radius:var(--radius);color:#E53935;font-size:14px;cursor:pointer;margin-top:4px}
+    .shop-add-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .shop-cat-sel{padding:10px 12px;border:2px solid #E0E0E0;border-radius:var(--radius);font-size:13px;outline:none;background:white;color:var(--text);width:100%}
+    .shop-cat-sel:focus{border-color:var(--green)}
+    .shop-input-row{display:flex;gap:8px;width:100%}
+    .shop-inp{flex:1;padding:10px 14px;border:2px solid #E0E0E0;border-radius:var(--radius);font-size:15px;outline:none}
+    .shop-inp:focus{border-color:var(--green)}
+    .shop-add-btn{background:var(--green);color:white;border:none;border-radius:var(--radius);padding:0 16px;font-size:22px;cursor:pointer}
+    .shop-summary{text-align:center;color:var(--text-lt);font-size:13px;margin-bottom:12px}
+    .shop-category{margin-bottom:12px}
+    .shop-cat-hd{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:var(--radius) var(--radius) 0 0;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+    .shop-cat-items{background:white;border-radius:0 0 var(--radius) var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .shop-item{display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid #F5F5F5;gap:10px}
+    .shop-item:last-child{border-bottom:none}
+    .shop-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--green);background:white;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+    .shop-check.checked{background:var(--green);border-color:var(--green)}
+    .shop-check.checked::after{content:'';width:6px;height:10px;border:2px solid white;border-top:none;border-left:none;transform:rotate(45deg) translateY(-1px);display:block}
+    .shop-text{flex:1;font-size:15px}
+    .shop-text.done{text-decoration:line-through;color:var(--text-lt)}
+    .shop-del{background:none;border:none;cursor:pointer;color:#BDBDBD;padding:4px;font-size:18px;line-height:1}
+    .shop-del:hover{color:#E53935}
+    .shop-empty-cat{padding:10px 14px;font-size:13px;color:#BDBDBD;font-style:italic}
+    .clear-done{display:block;width:100%;margin-top:4px;padding:10px;background:none;border:1px solid #E0E0E0;border-radius:var(--radius);color:var(--text-lt);font-size:13px;cursor:pointer}
+    .clear-done:hover{border-color:#E53935;color:#E53935}
+    .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+    .modal-ov.open{opacity:1;pointer-events:all}
+    .modal{background:white;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+    .modal-ov.open .modal{transform:translateY(0)}
+    .modal h2{font-size:16px;margin-bottom:16px}
+    .modal textarea{width:100%;padding:12px 14px;border:2px solid #E0E0E0;border-radius:var(--radius);font-size:15px;font-family:inherit;outline:none;transition:border-color .2s;resize:none}
+    .modal textarea:focus{border-color:var(--green)}
+    .modal-btns{display:flex;gap:10px;margin-top:16px}
+    .modal-cancel{flex:1;padding:12px;background:var(--gray);border:none;border-radius:var(--radius);font-size:15px;cursor:pointer}
+    .modal-save{flex:2;padding:12px;background:var(--green);color:white;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer}
+    .empty-state{text-align:center;padding:40px 20px;color:var(--text-lt)}
+    .empty-state .eicon{font-size:48px;margin-bottom:12px}
+    .empty-state p{font-size:14px}
   </style>
 </head>
 <body>
 <div class="header">
-  <h1 id="headerTitle">🥗 Hoje</h1>
+  <h1 id="headerTitle">Hoje</h1>
   <p id="headerSub"></p>
 </div>
 <div class="page active" id="page-hoje">
   <div class="week-strip" id="weekStrip"></div>
-  <div class="section-label">Refeições</div>
+  <div class="date-label" id="dateLabel"></div>
   <div id="todayMeals"></div>
 </div>
 <div class="page" id="page-semana">
   <div id="weekBlocks"></div>
 </div>
+<div class="page" id="page-agua" style="padding:0">
+  <div class="water-top">
+    <div class="water-ring-wrap">
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <circle cx="90" cy="90" r="75" fill="none" stroke="#E3F2FD" stroke-width="14"/>
+        <circle id="waterArc" cx="90" cy="90" r="75" fill="none" stroke="#2196F3" stroke-width="14" stroke-linecap="round" stroke-dasharray="471.24" stroke-dashoffset="471.24"/>
+      </svg>
+      <div class="water-center">
+        <div class="water-ml-big" id="waterTotal">0 ml</div>
+        <div class="water-goal-lbl">de 2000 ml</div>
+      </div>
+    </div>
+    <div class="water-quick">
+      <button class="wq-btn" onclick="addWater(150)">150 ml</button>
+      <button class="wq-btn" onclick="addWater(250)">250 ml</button>
+      <button class="wq-btn" onclick="addWater(350)">350 ml</button>
+      <button class="wq-btn" onclick="addWater(500)">500 ml</button>
+    </div>
+  </div>
+  <div class="water-custom">
+    <input type="number" id="waterCustomIn" placeholder="Outro valor (ml)" min="1" max="3000"/>
+    <button onclick="addWaterCustom()">+ Adicionar</button>
+  </div>
+  <div class="water-log-card">
+    <div class="water-log-hd">Registro de hoje</div>
+    <div id="waterEntries"></div>
+  </div>
+  <button class="water-reset" onclick="resetWater()">Zerar registro de hoje</button>
+</div>
+<div class="page" id="page-receitas">
+  <ul class="recipe-list" id="recipeList"></ul>
+  <div class="empty-state" id="recipeEmpty">
+    <div class="eicon">&#127859;</div>
+    <p>Adicione suas receitas favoritas</p>
+  </div>
+</div>
+<button class="fab" id="fabBtn" onclick="openNewRecipe()">+</button>
 <div class="page" id="page-mercado">
-  <div class="add-item-row">
-    <input type="text" id="newItemInput" placeholder="Adicionar item…" />
-    <button id="addItemBtn">+</button>
+  <div class="shop-add-row">
+    <select class="shop-cat-sel" id="shopCatSel">
+      <option value="frutas">&#127822; Frutas</option>
+      <option value="legumes">&#129382; Legumes e Verduras</option>
+      <option value="padaria">&#127838; Padaria</option>
+      <option value="proteinas">&#129385; Proteinas</option>
+      <option value="mercearia">&#128722; Mercearia</option>
+      <option value="limpeza">&#129529; Limpeza</option>
+      <option value="higiene">&#129332; Higiene</option>
+      <option value="laticinios">&#129371; Laticinios</option>
+    </select>
+    <div class="shop-input-row">
+      <input type="text" class="shop-inp" id="shopInp" placeholder="Adicionar item..."/>
+      <button class="shop-add-btn" onclick="addShopItem()">+</button>
+    </div>
   </div>
   <p class="shop-summary" id="shopSummary"></p>
-  <ul class="shop-list" id="shopList"></ul>
-  <button class="clear-done-btn" id="clearDoneBtn">Remover itens comprados</button>
+  <div id="shopCats"></div>
+  <button class="clear-done" onclick="clearDone()">Remover itens comprados</button>
 </div>
 <nav class="bottom-nav">
   <button class="nav-btn active" data-page="hoje" onclick="navigate('hoje')">
-    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 14.93V17a1 1 0 0 1-2 0v-.07A8 8 0 0 1 4.07 11H4a1 1 0 0 1 0-2h.07A8 8 0 0 1 11 4.07V4a1 1 0 0 1 2 0v.07A8 8 0 0 1 19.93 11H20a1 1 0 0 1 0 2h-.07A8 8 0 0 1 13 16.93zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg>
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
     Hoje
   </button>
   <button class="nav-btn" data-page="semana" onclick="navigate('semana')">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 18H5V8h14v13zM7 10h5v5H7z"/></svg>
     Semana
   </button>
+  <button class="nav-btn" data-page="agua" onclick="navigate('agua')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-5.33 4.55-8 8.48-8 11.8 0 4.98 3.8 8.2 8 8.2s8-3.22 8-8.2c0-3.32-2.67-7.25-8-11.8z"/></svg>
+    Agua
+  </button>
+  <button class="nav-btn" data-page="receitas" onclick="navigate('receitas')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.1 13.34l2.83-2.83L3.91 3.5a4.008 4.008 0 0 0 0 5.66l4.19 4.18zm6.78-1.81c1.53.71 3.68.21 5.27-1.38 1.91-1.91 2.28-4.65.81-6.12-1.46-1.46-4.2-1.1-6.12.81-1.59 1.59-2.09 3.74-1.38 5.27L3.7 19.87l1.41 1.41L12 14.41l6.88 6.88 1.41-1.41L13.41 13l1.47-1.47z"/></svg>
+    Receitas
+  </button>
   <button class="nav-btn" data-page="mercado" onclick="navigate('mercado')">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.21 9l-4.38-6.56a.993.993 0 0 0-.83-.4c-.32 0-.64.14-.83.4L6.79 9H2c-.55 0-1 .45-1 1 0 .09.01.18.04.27l2.54 9.27c.23.84 1 1.46 1.92 1.46h13c.92 0 1.69-.62 1.93-1.46l2.54-9.27L23 10c0-.55-.45-1-1-1h-4.79zM12 4.8L14.8 9H9.2L12 4.8zM18.5 19l-13 .01L3.31 11H20.7L18.5 19zM12 13c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
     Mercado
   </button>
 </nav>
-<div class="modal-overlay" id="mealModal">
+<div class="recipe-detail" id="recipeDetail">
+  <div class="recipe-dh">
+    <button class="r-back" onclick="closeRecipe()">&#8592; Voltar</button>
+    <h2 id="recipeTitle">Receita</h2>
+    <button class="r-save" onclick="saveRecipe()">Salvar</button>
+  </div>
+  <div class="recipe-dbody">
+    <input type="hidden" id="recipeId"/>
+    <div class="r-field">
+      <label>Nome da Receita</label>
+      <input type="text" class="big" id="recipeName" placeholder="Ex: Frango grelhado com legumes"/>
+    </div>
+    <div class="r-field">
+      <label>Calorias por porcao (kcal)</label>
+      <input type="number" id="recipeCal" placeholder="Ex: 350"/>
+    </div>
+    <div class="r-field">
+      <label>Ingredientes</label>
+      <textarea id="recipeIngr" rows="6" placeholder="Liste os ingredientes, um por linha..."></textarea>
+    </div>
+    <div class="r-field">
+      <label>Modo de Preparo</label>
+      <textarea id="recipePrep" rows="7" placeholder="Descreva o passo a passo..."></textarea>
+    </div>
+    <div class="r-field">
+      <label>Observacoes</label>
+      <textarea id="recipeNotes" rows="3" placeholder="Dicas, variacoes, substituicoes..."></textarea>
+    </div>
+    <button class="r-del" id="rDelBtn" onclick="deleteRecipe()">Excluir receita</button>
+  </div>
+</div>
+<div class="modal-ov" id="mealModal">
   <div class="modal">
-    <h2 id="modalTitle">Editar refeição</h2>
-    <textarea id="modalInput" rows="3" placeholder="O que vai no prato?"></textarea>
+    <h2 id="modalTitle">Editar refeicao</h2>
+    <textarea id="modalTxt" rows="3" placeholder="O que vai no prato?"></textarea>
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeModal()">Cancelar</button>
       <button class="modal-save" onclick="saveMeal()">Salvar</button>
@@ -213,137 +272,190 @@
   </div>
 </div>
 <script>
-const MEALS_KEY = 'cme_meals';
-const SHOP_KEY  = 'cme_shopping';
-function getMeals() { return JSON.parse(localStorage.getItem(MEALS_KEY) || '{}'); }
-function saveMeals(data) { localStorage.setItem(MEALS_KEY, JSON.stringify(data)); }
-function getShop() { return JSON.parse(localStorage.getItem(SHOP_KEY) || '[]'); }
-function saveShop(data) { localStorage.setItem(SHOP_KEY, JSON.stringify(data)); }
-const DAY_NAMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const DAY_FULL  = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-const MONTH_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-function dateKey(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function getWeekDays(baseDate) {
-  const days=[]; const d=new Date(baseDate);
-  d.setDate(d.getDate()-d.getDay());
-  for(let i=0;i<7;i++){days.push(new Date(d));d.setDate(d.getDate()+1);}
-  return days;
+var K_MEALS='cme_meals',K_WATER='cme_water',K_REC='cme_recipes',K_SHOP='cme_shop2';
+var WATER_GOAL=2000;
+var SHOP_CATS=['frutas','legumes','padaria','proteinas','mercearia','limpeza','higiene','laticinios'];
+function getMeals(){return JSON.parse(localStorage.getItem(K_MEALS)||'{}')}
+function saveMeals(d){localStorage.setItem(K_MEALS,JSON.stringify(d))}
+function getWater(){return JSON.parse(localStorage.getItem(K_WATER)||'{}')}
+function saveWater(d){localStorage.setItem(K_WATER,JSON.stringify(d))}
+function getRecipes(){return JSON.parse(localStorage.getItem(K_REC)||'[]')}
+function saveRecipes(d){localStorage.setItem(K_REC,JSON.stringify(d))}
+function getShop(){
+  var raw=JSON.parse(localStorage.getItem(K_SHOP)||'null'),obj={};
+  SHOP_CATS.forEach(function(c){obj[c]=[]});
+  if(!raw) return obj;
+  SHOP_CATS.forEach(function(c){if(raw[c]) obj[c]=raw[c]});
+  return obj;
 }
-const today=new Date(); today.setHours(0,0,0,0);
-let selectedDate=new Date(today);
-function navigate(page) {
-  const pages={hoje:'page-hoje',semana:'page-semana',mercado:'page-mercado'};
-  const titles={hoje:'🥗 Hoje',semana:'📅 Semana',mercado:'🛒 Lista de Mercado'};
-  Object.keys(pages).forEach(k=>{document.getElementById(pages[k]).classList.toggle('active',k===page);});
-  document.querySelectorAll('.nav-btn').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);});
-  document.getElementById('headerTitle').textContent=titles[page];
-  if(page==='hoje'){updateHeaderSub();renderToday();}
-  else if(page==='semana'){document.getElementById('headerSub').textContent='';renderWeek();}
-  else{document.getElementById('headerSub').textContent='';renderShop();}
+function saveShop(d){localStorage.setItem(K_SHOP,JSON.stringify(d))}
+var DN=['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+var DF=['Domingo','Segunda','Terca','Quarta','Quinta','Sexta','Sabado'];
+var MF=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function dKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function weekDays(base){var days=[],d=new Date(base);d.setDate(d.getDate()-d.getDay());for(var i=0;i<7;i++){days.push(new Date(d));d.setDate(d.getDate()+1);}return days}
+function nowTime(){var n=new Date();return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')}
+var today=new Date();today.setHours(0,0,0,0);
+var selDate=new Date(today);
+var TITLES={hoje:'Hoje',semana:'Semana',agua:'Hidratacao',receitas:'Receitas',mercado:'Lista de Mercado'};
+var PIDS={hoje:'page-hoje',semana:'page-semana',agua:'page-agua',receitas:'page-receitas',mercado:'page-mercado'};
+function navigate(page){
+  Object.keys(PIDS).forEach(function(k){document.getElementById(PIDS[k]).classList.toggle('active',k===page)});
+  document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.toggle('active',b.dataset.page===page)});
+  document.getElementById('fabBtn').style.display=page==='receitas'?'flex':'none';
+  document.getElementById('headerTitle').textContent=TITLES[page];
+  document.getElementById('headerSub').textContent='';
+  if(page==='hoje'){updateSub();renderToday();}
+  else if(page==='semana'){renderWeek();}
+  else if(page==='agua'){renderWater();}
+  else if(page==='receitas'){renderRecipes();}
+  else if(page==='mercado'){renderShop();}
 }
-function updateHeaderSub() {
-  const d=selectedDate;
-  document.getElementById('headerSub').textContent=DAY_FULL[d.getDay()]+', '+d.getDate()+' de '+MONTH_FULL[d.getMonth()];
-}
-function renderWeekStrip() {
-  const strip=document.getElementById('weekStrip');
-  const meals=getMeals(); const days=getWeekDays(today);
+function updateSub(){document.getElementById('headerSub').textContent=DF[selDate.getDay()]+', '+selDate.getDate()+' de '+MF[selDate.getMonth()]}
+var MEALS=[
+  {key:'breakfast',label:'Cafe da Manha',icon:'&#9728;&#65039;',bc:'badge-b'},
+  {key:'lunch',label:'Almoco',icon:'&#127859;',bc:'badge-l'},
+  {key:'dinner',label:'Jantar',icon:'&#127769;',bc:'badge-d'}
+];
+function renderStrip(){
+  var strip=document.getElementById('weekStrip'),meals=getMeals(),days=weekDays(today);
   strip.innerHTML='';
-  days.forEach(d=>{
-    const key=dateKey(d);
-    const isToday=key===dateKey(today);
-    const isSelected=key===dateKey(selectedDate);
-    const hasMeals=meals[key]&&Object.values(meals[key]).some(v=>v);
-    const btn=document.createElement('button');
-    btn.className='day-chip'+(isSelected?' selected':'')+(isToday&&!isSelected?' today':'')+(hasMeals?' has-meals':'');
-    btn.innerHTML='<span style="font-size:10px">'+DAY_NAMES[d.getDay()]+'</span><span class="num">'+d.getDate()+'</span><span class="dot"></span>';
-    btn.onclick=()=>{selectedDate=new Date(d);renderWeekStrip();renderTodayMeals();updateHeaderSub();};
+  days.forEach(function(d){
+    var k=dKey(d),isTod=k===dKey(today),isSel=k===dKey(selDate),hasMeals=meals[k]&&Object.values(meals[k]).some(function(v){return v});
+    var btn=document.createElement('button');
+    btn.className='day-chip'+(isSel?' selected':'')+(isTod&&!isSel?' today':'')+(hasMeals?' has-meals':'');
+    btn.innerHTML='<span style="font-size:10px">'+DN[d.getDay()]+'</span><span class="num">'+d.getDate()+'</span><span class="dot"></span>';
+    btn.onclick=(function(dd){return function(){selDate=new Date(dd);renderStrip();renderMeals();updateSub();}})(d);
     strip.appendChild(btn);
   });
 }
-const MEAL_TYPES=[
-  {key:'breakfast',label:'Café da Manhã',icon:'☀️'},
-  {key:'lunch',label:'Almoço',icon:'🍽️'},
-  {key:'dinner',label:'Jantar',icon:'🌙'},
-];
-function renderTodayMeals() {
-  const meals=getMeals(); const key=dateKey(selectedDate);
-  const dayMeals=meals[key]||{}; const container=document.getElementById('todayMeals');
-  container.innerHTML='';
-  MEAL_TYPES.forEach(m=>{
-    const val=dayMeals[m.key]||'';
-    const card=document.createElement('div');
+function renderMeals(){
+  var meals=getMeals(),k=dKey(selDate),dm=meals[k]||{};
+  document.getElementById('dateLabel').textContent=DF[selDate.getDay()].toUpperCase()+', '+selDate.getDate()+'/'+String(selDate.getMonth()+1).padStart(2,'0');
+  var ct=document.getElementById('todayMeals');ct.innerHTML='';
+  MEALS.forEach(function(m){
+    var val=dm[m.key]||'',card=document.createElement('div');
     card.className='meal-card';
-    card.innerHTML='<div class="meal-icon">'+m.icon+'</div><div class="meal-body"><div class="meal-title">'+m.label+'</div><div class="meal-text '+(val?'':'meal-empty')+'">'+(val||'Não planejado')+'</div></div><button class="edit-btn" onclick="openModal(''+key+'',''+m.key+'',''+m.label+'')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
-    container.appendChild(card);
+    card.innerHTML='<div class="meal-icon">'+m.icon+'</div><div class="meal-body"><span class="meal-badge '+m.bc+'">'+m.label+'</span><div class="meal-text'+(val?'':' meal-empty')+'">'+(val||'Nao planejado')+'</div></div><button class="edit-btn" onclick="openModal(''+k+'',''+m.key+'',''+m.label+'')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>';
+    ct.appendChild(card);
   });
 }
-function renderToday(){renderWeekStrip();renderTodayMeals();}
-function renderWeek() {
-  const meals=getMeals(); const days=getWeekDays(today);
-  const container=document.getElementById('weekBlocks');
-  container.innerHTML='';
-  days.forEach(d=>{
-    const key=dateKey(d); const isToday=key===dateKey(today);
-    const dayMeals=meals[key]||{};
-    const block=document.createElement('div');
+function renderToday(){renderStrip();renderMeals();}
+function renderWeek(){
+  var meals=getMeals(),days=weekDays(today),ct=document.getElementById('weekBlocks');ct.innerHTML='';
+  days.forEach(function(d){
+    var k=dKey(d),isTod=k===dKey(today),dm=meals[k]||{},block=document.createElement('div');
     block.className='week-day-block';
-    let html='<div class="week-day-header'+(isToday?' today-header':'')+'">'+DAY_FULL[d.getDay()]+', '+d.getDate()+'/'+(d.getMonth()+1)+(isToday?'<span class="badge">Hoje</span>':'')+'</div>';
-    MEAL_TYPES.forEach(m=>{
-      const val=dayMeals[m.key]||'';
-      html+='<div class="week-meal-row"><span class="week-meal-label">'+m.icon+' '+m.label.split(' ')[0]+'</span><span class="week-meal-value '+(val?'':'week-meal-empty')+'">'+(val||'Vazio')+'</span><button class="week-edit-btn" onclick="openModal(''+key+'',''+m.key+'',''+m.label+'')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></div>';
+    var html='<div class="week-day-hd'+(isTod?' today-hd':'')+'">'+DF[d.getDay()]+', '+d.getDate()+'/'+(d.getMonth()+1)+(isTod?'<span class="wbadge">Hoje</span>':'')+'</div>';
+    MEALS.forEach(function(m){
+      var val=dm[m.key]||'';
+      html+='<div class="week-row"><span class="week-label">'+m.icon+' '+m.label.split(' ')[0]+'</span><span class="week-val'+(val?'':' week-empty')+'">'+(val||'Vazio')+'</span><button class="week-edit" onclick="openModal(''+k+'',''+m.key+'',''+m.label+'')"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></div>';
     });
-    block.innerHTML=html;
-    container.appendChild(block);
+    block.innerHTML=html;ct.appendChild(block);
   });
 }
-let modalCtx={};
-function openModal(dk,mealKey,mealLabel) {
-  const meals=getMeals(); const val=(meals[dk]||{})[mealKey]||'';
-  modalCtx={dateKey:dk,mealKey};
-  document.getElementById('modalTitle').textContent='✏️ '+mealLabel;
-  document.getElementById('modalInput').value=val;
-  document.getElementById('mealModal').classList.add('open');
-  setTimeout(()=>document.getElementById('modalInput').focus(),300);
+function renderWater(){
+  var water=getWater(),k=dKey(today),log=water[k]||[];
+  var total=log.reduce(function(s,e){return s+e.ml},0);
+  var circ=471.24,offset=circ*(1-Math.min(total/WATER_GOAL,1));
+  document.getElementById('waterTotal').textContent=total+' ml';
+  var arc=document.getElementById('waterArc');
+  arc.setAttribute('stroke-dashoffset',String(offset));
+  arc.setAttribute('stroke',total>=WATER_GOAL?'#4CAF50':'#2196F3');
+  var ct=document.getElementById('waterEntries');
+  if(log.length===0){ct.innerHTML='<div style="padding:14px 16px;color:#BDBDBD;font-style:italic;font-size:14px">Nenhum registro ainda</div>';return;}
+  ct.innerHTML='';
+  log.slice().reverse().forEach(function(entry,i){
+    var realIdx=log.length-1-i,row=document.createElement('div');
+    row.className='water-entry';
+    row.innerHTML='<span style="font-size:18px">&#128167;</span><span class="water-entry-ml">'+entry.ml+' ml</span><span class="water-entry-time">'+entry.time+'</span><button class="water-entry-del" onclick="delWater('+realIdx+')">&#215;</button>';
+    ct.appendChild(row);
+  });
 }
-function closeModal(){document.getElementById('mealModal').classList.remove('open');}
-function saveMeal() {
-  const val=document.getElementById('modalInput').value.trim();
-  const meals=getMeals();
-  if(!meals[modalCtx.dateKey])meals[modalCtx.dateKey]={};
-  meals[modalCtx.dateKey][modalCtx.mealKey]=val;
-  saveMeals(meals); closeModal();
-  const activePage=document.querySelector('.page.active').id;
-  if(activePage==='page-hoje')renderToday();
-  if(activePage==='page-semana')renderWeek();
-}
-document.getElementById('mealModal').addEventListener('click',e=>{if(e.target===document.getElementById('mealModal'))closeModal();});
-function renderShop() {
-  const items=getShop(); const done=items.filter(i=>i.checked).length;
-  document.getElementById('shopSummary').textContent=items.length===0?'Lista vazia':done+' de '+items.length+' itens comprados';
-  const list=document.getElementById('shopList');
+function addWater(ml){var water=getWater(),k=dKey(today);if(!water[k])water[k]=[];water[k].push({ml:ml,time:nowTime()});saveWater(water);renderWater();}
+function addWaterCustom(){var inp=document.getElementById('waterCustomIn'),ml=parseInt(inp.value);if(!ml||ml<1)return;addWater(ml);inp.value='';}
+function delWater(idx){var water=getWater(),k=dKey(today);if(!water[k])return;water[k].splice(idx,1);saveWater(water);renderWater();}
+function resetWater(){if(!confirm('Zerar agua de hoje?'))return;var water=getWater(),k=dKey(today);water[k]=[];saveWater(water);renderWater();}
+function renderRecipes(){
+  var recipes=getRecipes(),list=document.getElementById('recipeList'),empty=document.getElementById('recipeEmpty');
   list.innerHTML='';
-  if(items.length===0){list.innerHTML='<div class="empty-state"><div class="icon">🛒</div><p>Adicione itens à lista acima</p></div>';return;}
-  items.forEach((item,idx)=>{
-    const li=document.createElement('li');
-    li.className='shop-item';
-    li.innerHTML='<div class="shop-check '+(item.checked?'checked':'')+'" onclick="toggleShop('+idx+')"></div><span class="shop-text '+(item.checked?'done':'')+'">'+(item.text)+'</span><button class="shop-delete" onclick="deleteShop('+idx+')">×</button>';
+  if(recipes.length===0){empty.style.display='block';return;}
+  empty.style.display='none';
+  recipes.forEach(function(r){
+    var li=document.createElement('li');li.className='recipe-card';
+    li.innerHTML='<div class="recipe-emoji">&#127859;</div><div class="recipe-info"><div class="recipe-name">'+r.name+'</div><div class="recipe-meta">'+(r.calories?r.calories+' kcal por porcao':'Sem info de calorias')+'</div></div><span class="recipe-arr">&#8250;</span>';
+    li.onclick=(function(id){return function(){openRecipe(id);}})(r.id);
     list.appendChild(li);
   });
 }
-function addShopItem() {
-  const input=document.getElementById('newItemInput');
-  const text=input.value.trim(); if(!text)return;
-  const items=getShop(); items.push({text,checked:false});
-  saveShop(items); input.value=''; renderShop();
+var curRecipeId=null;
+function openNewRecipe(){
+  curRecipeId=null;
+  ['recipeId','recipeName','recipeCal','recipeIngr','recipePrep','recipeNotes'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('recipeTitle').textContent='Nova Receita';
+  document.getElementById('rDelBtn').style.display='none';
+  document.getElementById('recipeDetail').classList.add('open');
 }
-function toggleShop(idx){const items=getShop();items[idx].checked=!items[idx].checked;saveShop(items);renderShop();}
-function deleteShop(idx){const items=getShop();items.splice(idx,1);saveShop(items);renderShop();}
-document.getElementById('addItemBtn').onclick=addShopItem;
-document.getElementById('newItemInput').addEventListener('keydown',e=>{if(e.key==='Enter')addShopItem();});
-document.getElementById('clearDoneBtn').onclick=()=>{saveShop(getShop().filter(i=>!i.checked));renderShop();};
-if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+function openRecipe(id){
+  var r=getRecipes().find(function(x){return x.id===id});if(!r)return;
+  curRecipeId=id;
+  document.getElementById('recipeId').value=id;
+  document.getElementById('recipeName').value=r.name||'';
+  document.getElementById('recipeCal').value=r.calories||'';
+  document.getElementById('recipeIngr').value=r.ingredients||'';
+  document.getElementById('recipePrep').value=r.preparation||'';
+  document.getElementById('recipeNotes').value=r.notes||'';
+  document.getElementById('recipeTitle').textContent=r.name||'Receita';
+  document.getElementById('rDelBtn').style.display='block';
+  document.getElementById('recipeDetail').classList.add('open');
+}
+function closeRecipe(){document.getElementById('recipeDetail').classList.remove('open');}
+function saveRecipe(){
+  var name=document.getElementById('recipeName').value.trim();
+  if(!name){alert('Informe o nome da receita');return;}
+  var recipe={id:curRecipeId||('r'+Date.now()),name:name,calories:document.getElementById('recipeCal').value.trim(),ingredients:document.getElementById('recipeIngr').value.trim(),preparation:document.getElementById('recipePrep').value.trim(),notes:document.getElementById('recipeNotes').value.trim()};
+  var recipes=getRecipes();
+  if(curRecipeId){var i=recipes.findIndex(function(x){return x.id===curRecipeId});if(i>-1)recipes[i]=recipe;else recipes.push(recipe);}
+  else recipes.push(recipe);
+  saveRecipes(recipes);closeRecipe();renderRecipes();
+}
+function deleteRecipe(){if(!curRecipeId)return;if(!confirm('Excluir esta receita?'))return;saveRecipes(getRecipes().filter(function(r){return r.id!==curRecipeId}));closeRecipe();renderRecipes();}
+var CAT_INFO={
+  frutas:{label:'Frutas',emoji:'&#127822;',color:'#E8F5E9',text:'#1B5E20'},
+  legumes:{label:'Legumes e Verduras',emoji:'&#129382;',color:'#F3E5F5',text:'#4A148C'},
+  padaria:{label:'Padaria',emoji:'&#127838;',color:'#FFF8E1',text:'#E65100'},
+  proteinas:{label:'Proteinas',emoji:'&#129385;',color:'#FFEBEE',text:'#B71C1C'},
+  mercearia:{label:'Mercearia',emoji:'&#128722;',color:'#E3F2FD',text:'#0D47A1'},
+  limpeza:{label:'Limpeza',emoji:'&#129529;',color:'#E0F7FA',text:'#004D40'},
+  higiene:{label:'Higiene',emoji:'&#129332;',color:'#FBE9E7',text:'#BF360C'},
+  laticinios:{label:'Laticinios',emoji:'&#129371;',color:'#F9FBE7',text:'#827717'}
+};
+function renderShop(){
+  var shop=getShop(),total=0,done=0;
+  SHOP_CATS.forEach(function(c){total+=shop[c].length;done+=shop[c].filter(function(i){return i.checked}).length});
+  document.getElementById('shopSummary').textContent=total===0?'Lista vazia':done+' de '+total+' itens comprados';
+  var ct=document.getElementById('shopCats');ct.innerHTML='';
+  SHOP_CATS.forEach(function(cat){
+    var items=shop[cat],info=CAT_INFO[cat],sec=document.createElement('div');sec.className='shop-category';
+    var html='<div class="shop-cat-hd" style="background:'+info.color+';color:'+info.text+'">'+info.emoji+' '+info.label+' <span style="font-weight:400;margin-left:4px;opacity:.7">('+items.length+')</span></div><div class="shop-cat-items">';
+    if(items.length===0){html+='<div class="shop-empty-cat">Nenhum item nesta categoria</div>';}
+    else items.forEach(function(item,idx){html+='<div class="shop-item"><div class="shop-check'+(item.checked?' checked':'')+'" onclick="toggleShop(''+cat+'','+idx+')"></div><span class="shop-text'+(item.checked?' done':'')+'">'+item.text+'</span><button class="shop-del" onclick="delShop(''+cat+'','+idx+')">&#215;</button></div>';});
+    html+='</div>';sec.innerHTML=html;ct.appendChild(sec);
+  });
+}
+function addShopItem(){var inp=document.getElementById('shopInp'),cat=document.getElementById('shopCatSel').value,text=inp.value.trim();if(!text)return;var shop=getShop();shop[cat].push({text:text,checked:false});saveShop(shop);inp.value='';renderShop();}
+function toggleShop(cat,idx){var shop=getShop();shop[cat][idx].checked=!shop[cat][idx].checked;saveShop(shop);renderShop();}
+function delShop(cat,idx){var shop=getShop();shop[cat].splice(idx,1);saveShop(shop);renderShop();}
+function clearDone(){var shop=getShop();SHOP_CATS.forEach(function(c){shop[c]=shop[c].filter(function(i){return!i.checked})});saveShop(shop);renderShop();}
+var mCtx={};
+function openModal(dk,mealKey,mealLabel){var meals=getMeals(),val=(meals[dk]||{})[mealKey]||'';mCtx={dk:dk,mk:mealKey};document.getElementById('modalTitle').textContent='Editar '+mealLabel;document.getElementById('modalTxt').value=val;document.getElementById('mealModal').classList.add('open');setTimeout(function(){document.getElementById('modalTxt').focus()},300);}
+function closeModal(){document.getElementById('mealModal').classList.remove('open');}
+function saveMeal(){var val=document.getElementById('modalTxt').value.trim(),meals=getMeals();if(!meals[mCtx.dk])meals[mCtx.dk]={};meals[mCtx.dk][mCtx.mk]=val;saveMeals(meals);closeModal();var active=document.querySelector('.page.active').id;if(active==='page-hoje')renderToday();if(active==='page-semana')renderWeek();}
+document.getElementById('mealModal').addEventListener('click',function(e){if(e.target===document.getElementById('mealModal'))closeModal();});
+document.getElementById('shopInp').addEventListener('keydown',function(e){if(e.key==='Enter')addShopItem();});
+document.getElementById('waterCustomIn').addEventListener('keydown',function(e){if(e.key==='Enter')addWaterCustom();});
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}
 navigate('hoje');
 </script>
 </body>
-    </html>
+                                                   </html>
