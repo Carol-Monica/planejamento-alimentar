@@ -713,15 +713,31 @@ document.getElementById('root').addEventListener('input', e=>{
   const el=e.target;
   const field=el.dataset.field;
   const action=el.dataset.action;
-  if(field){setState({[field]:el.value});return;}
+  if(field){
+    // Atualiza estado sem re-renderizar (evita perda de foco no mobile)
+    state[field]=el.value;
+    if(field==='search'){
+      // Busca precisa filtrar: re-renderiza e recoloca foco
+      const pos=el.selectionStart;
+      render();
+      const neo=document.querySelector('[data-field="search"]');
+      if(neo){neo.focus();try{neo.setSelectionRange(pos,pos);}catch(_){}}
+    }
+    return;
+  }
   if(!action) return;
   const rid=state.editId;
-  if(action==='recipeName') updateData(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.name=el.value;});
-  else if(action==='recipeCal') updateData(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.calories=el.value;});
-  else if(action==='recipeNotes') updateData(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.notes=el.value;});
-  else if(action==='ingName'){const iid=el.dataset.id;updateData(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.ingredients.find(i=>i.id===iid);if(x)x.name=el.value;}});}
-  else if(action==='ingQty'){const iid=el.dataset.id;updateData(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.ingredients.find(i=>i.id===iid);if(x)x.qty=el.value;}});}
-  else if(action==='stepText'){const sid=el.dataset.id;updateData(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.steps.find(s=>s.id===sid);if(x)x.text=el.value;}});}
+  // Receitas: salva no localStorage sem re-renderizar (mantém foco)
+  const silentSave=fn=>{
+    const d=JSON.parse(JSON.stringify(state.data));
+    fn(d);saveData(d);state.data=d;
+  };
+  if(action==='recipeName') silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.name=el.value;});
+  else if(action==='recipeCal') silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.calories=el.value;});
+  else if(action==='recipeNotes') silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.notes=el.value;});
+  else if(action==='ingName'){const iid=el.dataset.id;silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.ingredients.find(i=>i.id===iid);if(x)x.name=el.value;}});}
+  else if(action==='ingQty'){const iid=el.dataset.id;silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.ingredients.find(i=>i.id===iid);if(x)x.qty=el.value;}});}
+  else if(action==='stepText'){const sid=el.dataset.id;silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.steps.find(s=>s.id===sid);if(x)x.text=el.value;}});}
 });
 
 function moveMealInType(date,id,type,dir){
