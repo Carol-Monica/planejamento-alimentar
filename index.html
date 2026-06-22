@@ -38,13 +38,32 @@ const MON_F=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agos
 // ─── Dados & persistência ─────────────────────────────────────────────────────
 const STORAGE_KEY = 'cme_pa_v1';
 function defaultData(){
-  return {goal:2000,recipes:[],meals:{},water:{},
-    shopping:{frutas:[],legumes:[],padaria:[],proteinas:[],mercearia:[],limpeza:[],higiene:[],laticinios:[]}};
+  return {
+    goal:2000,
+    recipes:[],
+    recipeCategories:[], // [{id,name}] categorias personalizadas
+    meals:{},
+    water:{},
+    shopping:{frutas:[],legumes:[],padaria:[],proteinas:[],mercearia:[],limpeza:[],higiene:[],laticinios:[]},
+    cleaning:{
+      weekTasks:{seg:[],ter:[],qua:[],qui:[],sex:[],sab:[],dom:[]},
+      dailyTasks:[],
+      notes:'',
+      periodicTasks:[] // [{id,text,freq:'semestral'|'anual',lastDone:null}]
+    }
+  };
 }
 function loadData(){
   try{const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){const d=JSON.parse(raw);const base=defaultData();
-      return Object.assign(base,d,{shopping:Object.assign(base.shopping,d.shopping||{})});}}catch(e){}
+      const dc=d.cleaning||{};
+      const cleaning={
+        weekTasks:Object.assign({},base.cleaning.weekTasks,dc.weekTasks||{}),
+        dailyTasks:dc.dailyTasks||[],
+        notes:dc.notes||'',
+        periodicTasks:dc.periodicTasks||[]
+      };
+      return Object.assign(base,d,{shopping:Object.assign(base.shopping,d.shopping||{}),cleaning,recipeCategories:d.recipeCategories||[]});}}catch(e){}
   return defaultData();
 }
 function saveData(d){ try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}catch(e){} }
@@ -60,6 +79,11 @@ let state = {
   addCat: null, addCatName:'', addCatQty:'',
   addBlock: null, addBlockName:'', addBlockRecipeId:'', addBlockCal:'',
   mealModal: false, mealDate: null, mealName:'', mealType:'cafe', mealRecipeId:'',
+  recipeCatFilter: 'all',
+  cleanSection: 'semana',
+  cleanAddDay: null, cleanAddText: '',
+  addingPeriodic: false, periodicText: '', periodicFreq: 'semestral',
+  addingNewCat: false, newCatName: '',
 };
 
 function setState(patch){
@@ -95,6 +119,20 @@ const CAT_DEFS = [
   ['laticinios','Laticínios','#6E72A8'],
 ];
 
+const RECIPE_CATS_FIXED = [
+  {id:'paes',label:'Pães'},
+  {id:'lanches',label:'Lanches'},
+  {id:'sobremesas',label:'Sobremesas'},
+  {id:'carnes',label:'Carnes'},
+  {id:'bolos',label:'Bolos'},
+  {id:'bolachas',label:'Bolachas'},
+  {id:'bebidas',label:'Bebidas'},
+];
+
+const CLEAN_DAYS = [
+  ['seg','Segunda'],['ter','Terça'],['qua','Quarta'],['qui','Quinta'],['sex','Sexta'],['sab','Sábado'],['dom','Domingo']
+];
+
 // ─── SVG ícones ───────────────────────────────────────────────────────────────
 const IC = {
   utensils:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>`,
@@ -115,6 +153,11 @@ const IC = {
   home:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/></svg>`,
   check:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`,
   foodico:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>`,
+  broom:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21L9 10"/><path d="M9 10C11 4 6 2 3 5c-1 1-2 3-1 5"/><path d="M3 10c-1 2 0 4 1.5 5.5"/><path d="M4.5 15.5C6.5 17.5 10.5 18 13 15.5L20 21"/></svg>`,
+  coin:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9a2 2 0 0 0-1.8-1H10a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4h-3a2 2 0 0 1-1.8-1"/><path d="M12 6v2m0 8v2"/></svg>`,
+  tag:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l7.29-7.29a1 1 0 0 0 0-1.42z"/><circle cx="7" cy="7" r="1" fill="currentColor" stroke="none"/></svg>`,
+  yield:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  clock:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -413,23 +456,54 @@ function renderAgua(){
 function renderReceitas(){
   const D=state.data, S=state;
   const q=(S.search||'').toLowerCase();
-  const list=D.recipes.filter(r=>!q||(r.name||'').toLowerCase().includes(q));
+  const allCats=[{id:'all',label:'Todas'},...RECIPE_CATS_FIXED,...(D.recipeCategories||[]).map(c=>({id:c.id,label:c.name}))];
+  const activeCat=S.recipeCatFilter||'all';
+
+  let filtered=D.recipes.filter(r=>!q||(r.name||'').toLowerCase().includes(q));
+  if(activeCat!=='all') filtered=filtered.filter(r=>(r.category||'')=== activeCat);
+
+  // Category tabs
+  let tabsHTML='';
+  allCats.forEach(c=>{
+    const act=c.id===activeCat;
+    tabsHTML+=`<button data-action="recipeCatFilter" data-cat="${c.id}" style="border:none;white-space:nowrap;background:${act?ACCENT:'#F1EBE2'};color:${act?'#fff':'#5C5C88'};font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:8px 14px;border-radius:999px;flex:none;">${esc(c.label)}</button>`;
+  });
+  // Add new category button
+  if(!S.addingNewCat){
+    tabsHTML+=`<button data-action="openNewCat" style="border:1px dashed #D8CEBF;background:#fff;color:${ACCENT_TEXT};font-weight:600;font-size:12px;padding:8px 14px;border-radius:999px;flex:none;display:flex;align-items:center;gap:4px;">${IC.plus}Novo grupo</button>`;
+  }
+
+  let newCatFormHTML='';
+  if(S.addingNewCat){
+    newCatFormHTML=`<div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input data-field="newCatName" value="${esc(S.newCatName)}" placeholder="Nome do grupo" style="flex:1;border:1px solid #E2DACE;border-radius:11px;padding:10px 13px;font-size:14px;background:#fff;outline:none;color:#1A1A2E;"/>
+      <button data-action="saveNewCat" style="border:none;background:${ACCENT_GRAD};color:#fff;font-weight:700;font-size:13px;padding:10px 16px;border-radius:11px;">Criar</button>
+      <button data-action="cancelNewCat" style="border:none;background:transparent;color:#9A9AB5;padding:8px;">${IC.x}</button>
+    </div>`;
+  }
 
   let listHTML='';
-  if(list.length===0){
+  if(filtered.length===0){
     listHTML=`<div style="text-align:center;padding:48px 20px;background:#fff;border:1px dashed #E2D9CC;border-radius:18px;">
       <div style="width:54px;height:54px;border-radius:15px;background:${ACCENT_SOFT};display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:${ACCENT_TEXT};">${IC.book}</div>
-      <div style="font-size:15px;color:#5C5C88;line-height:1.4;">Adicione suas receitas favoritas.<br>Toque em <b style="color:${ACCENT_TEXT};">Nova</b> para começar.</div>
+      <div style="font-size:15px;color:#5C5C88;line-height:1.4;">Nenhuma receita aqui ainda.<br>Toque em <b style="color:${ACCENT_TEXT};">Nova</b> para começar.</div>
     </div>`;
   } else {
-    list.forEach(r=>{
+    filtered.forEach(r=>{
       const name=(r.name||'').trim()||'Sem nome';
+      const catLabel=allCats.find(c=>c.id===(r.category||''))?.label||'';
+      const calStr=(r.calories||'—')+' kcal';
+      const ingCount=(r.ingredients||[]).filter(i=>(i.name||'').trim()).length;
+      const costStr=r.cost?'R$ '+(r.cost):'';
+      const servStr=r.servings?(r.servings)+' porç.':'';
+      const meta=[calStr,ingCount+' itens',costStr,servStr].filter(Boolean).join(' · ');
       listHTML+=`<div style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:16px;padding:12px;box-shadow:0 1px 2px rgba(26,26,46,.05);">
         <button data-action="openRecipe" data-id="${r.id}" style="display:flex;align-items:center;gap:13px;flex:1;min-width:0;border:none;background:transparent;text-align:left;padding:0;">
           <div style="width:50px;height:50px;border-radius:13px;background:${ACCENT_SOFT};display:flex;align-items:center;justify-content:center;color:${ACCENT_TEXT};flex:none;">${IC.book}</div>
           <div style="flex:1;min-width:0;">
             <div style="font-family:'Playfair Display',serif;font-weight:700;font-size:17px;line-height:1.2;">${esc(name)}</div>
-            <div style="font-size:12.5px;color:#9A9AB5;margin-top:4px;">${(r.calories||'—')} kcal · ${((r.ingredients||[]).filter(i=>(i.name||'').trim()).length)} itens</div>
+            <div style="font-size:12.5px;color:#9A9AB5;margin-top:4px;">${meta}</div>
+            ${catLabel?`<div style="display:inline-flex;align-items:center;gap:4px;background:${ACCENT_SOFT};color:${ACCENT_TEXT};font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;margin-top:5px;">${IC.tag}${esc(catLabel)}</div>`:''}
           </div>
         </button>
         <button data-action="deleteRecipe" data-id="${r.id}" style="border:none;background:transparent;color:#C4C0CE;padding:8px;flex:none;">${IC.trash}</button>
@@ -438,11 +512,13 @@ function renderReceitas(){
   }
 
   return `<div class="page-anim" style="padding:6px 22px 24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 14px;">
       <h1 style="font-family:'Playfair Display',serif;font-weight:800;font-size:32px;letter-spacing:-.01em;">Receitas</h1>
       <button data-action="newRecipe" style="border:none;background:${ACCENT_GRAD};color:#fff;font-weight:600;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;padding:10px 16px;border-radius:999px;box-shadow:0 8px 18px -6px rgba(244,123,91,.5);display:flex;align-items:center;gap:6px;">${IC.plus}Nova</button>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #E2DACE;border-radius:14px;padding:11px 14px;margin-bottom:18px;">${IC.search}<input data-field="search" value="${esc(S.search)}" placeholder="Buscar receita" style="border:none;outline:none;flex:1;font-size:15px;background:transparent;color:#1A1A2E;"/></div>
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #E2DACE;border-radius:14px;padding:11px 14px;margin-bottom:12px;">${IC.search}<input data-field="search" value="${esc(S.search)}" placeholder="Buscar receita" style="border:none;outline:none;flex:1;font-size:15px;background:transparent;color:#1A1A2E;"/></div>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:10px;-webkit-overflow-scrolling:touch;">${tabsHTML}</div>
+    ${newCatFormHTML}
     <div style="display:flex;flex-direction:column;gap:11px;">${listHTML}</div>
   </div>`;
 }
@@ -472,19 +548,50 @@ function renderReceita(){
     </div>`;
   });
 
+  // Category selector
+  const allCats2=[...RECIPE_CATS_FIXED,...(D.recipeCategories||[]).map(c=>({id:c.id,label:c.name}))];
+  let catPillsHTML='<button data-action="recipeSetCat" data-cat="" style="border:none;white-space:nowrap;background:'+(cur.category?'#F1EBE2':ACCENT)+';color:'+(cur.category?'#5C5C88':'#fff')+';font-weight:700;font-size:12px;padding:7px 13px;border-radius:999px;">Sem grupo</button>';
+  allCats2.forEach(c=>{
+    const act=(cur.category||'')=== c.id;
+    catPillsHTML+=`<button data-action="recipeSetCat" data-cat="${c.id}" style="border:none;white-space:nowrap;background:${act?ACCENT:'#F1EBE2'};color:${act?'#fff':'#5C5C88'};font-weight:700;font-size:12px;padding:7px 13px;border-radius:999px;">${esc(c.label)}</button>`;
+  });
+
   return `<div class="page-anim" style="padding:6px 22px 30px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 16px;">
       <button data-action="backRecipes" style="border:none;background:#F1EBE2;color:#5C5C88;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:9px 14px 9px 11px;border-radius:999px;">${IC.chevL}Receitas</button>
       <button data-action="deleteCurrentRecipe" style="border:none;background:transparent;color:#C7708A;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:8px;">${IC.trash}Excluir</button>
     </div>
-    <input data-action="recipeName" value="${esc(cur.name||'')}" placeholder="Nome da receita" style="width:100%;border:none;outline:none;background:transparent;font-family:'Playfair Display',serif;font-weight:800;font-size:30px;letter-spacing:-.01em;color:#1A1A2E;padding:0;margin-bottom:14px;"/>
-    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:14px;padding:13px 15px;margin-bottom:24px;box-shadow:0 1px 2px rgba(26,26,46,.04);">
-      <div style="width:38px;height:38px;border-radius:11px;background:${ACCENT_SOFT};display:flex;align-items:center;justify-content:center;color:${ACCENT_TEXT};flex:none;">${IC.bulb}</div>
+    <input data-action="recipeName" value="${esc(cur.name||'')}" placeholder="Nome da receita" style="width:100%;border:none;outline:none;background:transparent;font-family:'Playfair Display',serif;font-weight:800;font-size:30px;letter-spacing:-.01em;color:#1A1A2E;padding:0;margin-bottom:10px;"/>
+    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:12px;margin-bottom:16px;-webkit-overflow-scrolling:touch;">${catPillsHTML}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(26,26,46,.04);">
+        <div style="width:34px;height:34px;border-radius:10px;background:${ACCENT_SOFT};display:flex;align-items:center;justify-content:center;color:${ACCENT_TEXT};flex:none;">${IC.bulb}</div>
+        <div style="flex:1;">
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#9A9AB5;font-weight:700;margin-bottom:1px;">kcal / porção</div>
+          <div style="display:flex;align-items:baseline;gap:3px;">
+            <input data-action="recipeCal" inputmode="numeric" value="${esc(cur.calories||'')}" placeholder="0" style="border:none;outline:none;background:transparent;font-weight:700;font-size:17px;width:60px;color:#1A1A2E;padding:0;"/>
+            <span style="font-size:12px;color:#9A9AB5;font-weight:600;">kcal</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:14px;padding:12px 14px;box-shadow:0 1px 2px rgba(26,26,46,.04);">
+        <div style="width:34px;height:34px;border-radius:10px;background:#EDF9F4;display:flex;align-items:center;justify-content:center;color:#2D7A57;flex:none;">${IC.yield}</div>
+        <div style="flex:1;">
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#9A9AB5;font-weight:700;margin-bottom:1px;">Rendimento</div>
+          <div style="display:flex;align-items:baseline;gap:3px;">
+            <input data-action="recipeServings" inputmode="decimal" value="${esc(cur.servings||'')}" placeholder="0" style="border:none;outline:none;background:transparent;font-weight:700;font-size:17px;width:55px;color:#1A1A2E;padding:0;"/>
+            <span style="font-size:12px;color:#9A9AB5;font-weight:600;">porç.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:14px;padding:12px 14px;margin-bottom:24px;box-shadow:0 1px 2px rgba(26,26,46,.04);">
+      <div style="width:34px;height:34px;border-radius:10px;background:#FFF8EC;display:flex;align-items:center;justify-content:center;color:#C97B3F;flex:none;">${IC.coin}</div>
       <div style="flex:1;">
-        <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9A9AB5;font-weight:700;margin-bottom:2px;">Calorias por porção</div>
-        <div style="display:flex;align-items:baseline;gap:5px;">
-          <input data-action="recipeCal" inputmode="numeric" value="${esc(cur.calories||'')}" placeholder="0" style="border:none;outline:none;background:transparent;font-weight:700;font-size:18px;width:70px;color:#1A1A2E;padding:0;"/>
-          <span style="font-size:13px;color:#9A9AB5;font-weight:600;">kcal</span>
+        <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#9A9AB5;font-weight:700;margin-bottom:1px;">Custo médio</div>
+        <div style="display:flex;align-items:baseline;gap:3px;">
+          <span style="font-size:15px;color:#9A9AB5;font-weight:600;">R$</span>
+          <input data-action="recipeCost" inputmode="decimal" value="${esc(cur.cost||'')}" placeholder="0,00" style="border:none;outline:none;background:transparent;font-weight:700;font-size:17px;width:80px;color:#1A1A2E;padding:0 0 0 4px;"/>
         </div>
       </div>
     </div>
@@ -550,6 +657,133 @@ function renderMercado(){
   </div>`;
 }
 
+// ─── LIMPEZA ─────────────────────────────────────────────────────────────────
+function renderLimpeza(){
+  const D=state.data, S=state;
+  const cl=D.cleaning;
+  const sec=S.cleanSection||'semana';
+  const CLEAN_BLUE='#3E6FB0';
+  const CLEAN_BLUE_SOFT='#EEF3FB';
+
+  // Section tabs
+  const sections=[['semana','Semana'],['diarias','Diárias'],['periodicas','Periódicas'],['notas','Notas']];
+  let secTabsHTML='';
+  sections.forEach(([k,l])=>{
+    const act=sec===k;
+    secTabsHTML+=`<button data-action="cleanSection" data-sec="${k}" style="border:none;flex:1;background:${act?CLEAN_BLUE:'transparent'};color:${act?'#fff':'#9A9AB5'};font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:10px 4px;border-radius:12px;">${l}</button>`;
+  });
+
+  let bodyHTML='';
+
+  if(sec==='semana'){
+    // Weekly grid - one card per day
+    let daysHTML='';
+    CLEAN_DAYS.forEach(([key,label])=>{
+      const tasks=cl.weekTasks[key]||[];
+      let tHTML='';
+      if(tasks.length===0) tHTML=`<div style="font-size:13px;color:#C4C0CE;padding:4px 0;">Nenhuma tarefa</div>`;
+      else tasks.forEach(t=>{
+        tHTML+=`<div style="display:flex;align-items:center;gap:9px;padding:4px 0;">
+          <button data-action="cleanToggleWeek" data-day="${key}" data-id="${t.id}" style="width:22px;height:22px;border-radius:6px;border:2px solid ${t.done?CLEAN_BLUE:'#D4D4E8'};background:${t.done?CLEAN_BLUE:'#fff'};display:flex;align-items:center;justify-content:center;flex:none;padding:0;">${IC.check}</button>
+          <span style="flex:1;font-size:14px;color:${t.done?'#ABABC8':'#1A1A2E'};text-decoration:${t.done?'line-through':'none'};">${esc(t.text)}</span>
+          <button data-action="cleanDelWeek" data-day="${key}" data-id="${t.id}" style="border:none;background:transparent;color:#D0CCD8;padding:2px;flex:none;">${IC.x}</button>
+        </div>`;
+      });
+      let addHTML='';
+      if(S.cleanAddDay===key){
+        addHTML=`<div style="display:flex;gap:7px;margin-top:8px;">
+          <input data-field="cleanAddText" value="${esc(S.cleanAddText)}" placeholder="Nova tarefa" style="flex:1;border:1px solid #C8D6EC;border-radius:10px;padding:9px 12px;font-size:14px;background:#fff;outline:none;color:#1A1A2E;"/>
+          <button data-action="cleanAddWeekSubmit" data-day="${key}" style="border:none;background:${CLEAN_BLUE};color:#fff;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;">${IC.plus}</button>
+          <button data-action="cleanAddCancel" style="border:none;background:transparent;color:#9A9AB5;padding:2px;">${IC.x}</button>
+        </div>`;
+      }
+      daysHTML+=`<div style="background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:16px;padding:14px;box-shadow:0 1px 2px rgba(26,26,46,.04);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span style="font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:${CLEAN_BLUE};">${label}</span>
+          <button data-action="cleanAddWeekOpen" data-day="${key}" style="border:none;background:${CLEAN_BLUE_SOFT};color:${CLEAN_BLUE};width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          </button>
+        </div>
+        <div style="display:flex;flex-direction:column;">${tHTML}</div>
+        ${addHTML}
+      </div>`;
+    });
+    bodyHTML=`<div style="display:flex;flex-direction:column;gap:10px;">${daysHTML}</div>`;
+
+  } else if(sec==='diarias'){
+    const tasks=cl.dailyTasks||[];
+    let tHTML='';
+    if(tasks.length===0) tHTML=`<div style="text-align:center;font-size:14px;color:#C4C0CE;padding:32px 0;">Nenhuma tarefa diária.</div>`;
+    else tasks.forEach(t=>{
+      tHTML+=`<div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:14px;padding:12px 13px;">
+        <button data-action="cleanToggleDaily" data-id="${t.id}" style="width:24px;height:24px;border-radius:7px;border:2px solid ${t.done?CLEAN_BLUE:'#D4D4E8'};background:${t.done?CLEAN_BLUE:'#fff'};display:flex;align-items:center;justify-content:center;flex:none;padding:0;">${IC.check}</button>
+        <span style="flex:1;font-size:15px;color:${t.done?'#ABABC8':'#1A1A2E'};text-decoration:${t.done?'line-through':'none'};">${esc(t.text)}</span>
+        <button data-action="cleanDelDaily" data-id="${t.id}" style="border:none;background:transparent;color:#D0CCD8;padding:4px;flex:none;">${IC.x}</button>
+      </div>`;
+    });
+    let addDailyHTML='';
+    if(S.cleanAddDay==='daily'){
+      addDailyHTML=`<div style="display:flex;gap:8px;margin-top:12px;">
+        <input data-field="cleanAddText" value="${esc(S.cleanAddText)}" placeholder="Nova tarefa diária" style="flex:1;border:1px solid #C8D6EC;border-radius:11px;padding:11px 13px;font-size:14px;background:#fff;outline:none;color:#1A1A2E;"/>
+        <button data-action="cleanAddDailySubmit" style="border:none;background:${CLEAN_BLUE};color:#fff;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none;">${IC.plus}</button>
+        <button data-action="cleanAddCancel" style="border:none;background:transparent;color:#9A9AB5;padding:4px;">${IC.x}</button>
+      </div>`;
+    } else {
+      addDailyHTML=`<button data-action="cleanAddDailyOpen" style="border:1px dashed #C8D6EC;background:#fff;color:${CLEAN_BLUE};font-weight:600;font-size:13px;letter-spacing:.04em;text-transform:uppercase;padding:12px;border-radius:13px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;">${IC.plus}Adicionar tarefa</button>`;
+    }
+    bodyHTML=`<div style="display:flex;flex-direction:column;gap:8px;">${tHTML}</div>${addDailyHTML}`;
+
+  } else if(sec==='periodicas'){
+    const tasks=cl.periodicTasks||[];
+    let tHTML='';
+    if(tasks.length===0) tHTML=`<div style="text-align:center;font-size:14px;color:#C4C0CE;padding:32px 0;">Nenhuma tarefa periódica.</div>`;
+    else tasks.forEach(t=>{
+      const freqCol=t.freq==='anual'?'#8A6090':'#3E7090';
+      const freqLabel=t.freq==='anual'?'Anual':'Semestral';
+      tHTML+=`<div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:14px;padding:12px 13px;">
+        <button data-action="cleanTogglePeriodic" data-id="${t.id}" style="width:24px;height:24px;border-radius:7px;border:2px solid ${t.done?CLEAN_BLUE:'#D4D4E8'};background:${t.done?CLEAN_BLUE:'#fff'};display:flex;align-items:center;justify-content:center;flex:none;padding:0;">${IC.check}</button>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:15px;color:${t.done?'#ABABC8':'#1A1A2E'};text-decoration:${t.done?'line-through':'none'};">${esc(t.text)}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <span style="font-size:11px;font-weight:700;background:${freqCol}22;color:${freqCol};padding:2px 9px;border-radius:999px;">${freqLabel}</span>
+            ${t.lastDone?`<span style="font-size:11px;color:#9A9AB5;">${IC.clock} Feito: ${t.lastDone}</span>`:''}
+          </div>
+        </div>
+        <button data-action="cleanDelPeriodic" data-id="${t.id}" style="border:none;background:transparent;color:#D0CCD8;padding:4px;flex:none;">${IC.x}</button>
+      </div>`;
+    });
+    let addPeriodicHTML='';
+    if(S.addingPeriodic){
+      addPeriodicHTML=`<div style="background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:16px;padding:14px;margin-top:12px;">
+        <input data-field="periodicText" value="${esc(S.periodicText)}" placeholder="Descrição da tarefa" style="width:100%;border:1px solid #E2DACE;border-radius:11px;padding:11px 13px;font-size:14px;background:#F9F7F4;outline:none;color:#1A1A2E;margin-bottom:10px;"/>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button data-action="periodicFreqSelect" data-freq="semestral" style="flex:1;border:none;background:${S.periodicFreq==='semestral'?'#3E7090':'#F1EBE2'};color:${S.periodicFreq==='semestral'?'#fff':'#5C5C88'};font-weight:700;font-size:13px;padding:10px;border-radius:11px;">Semestral</button>
+          <button data-action="periodicFreqSelect" data-freq="anual" style="flex:1;border:none;background:${S.periodicFreq==='anual'?'#8A6090':'#F1EBE2'};color:${S.periodicFreq==='anual'?'#fff':'#5C5C88'};font-weight:700;font-size:13px;padding:10px;border-radius:11px;">Anual</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button data-action="cleanAddPeriodicSubmit" style="flex:1;border:none;background:${CLEAN_BLUE};color:#fff;font-weight:700;font-size:13px;padding:12px;border-radius:11px;">Adicionar</button>
+          <button data-action="cancelAddPeriodic" style="border:none;background:transparent;color:#9A9AB5;padding:8px;">${IC.x}</button>
+        </div>
+      </div>`;
+    } else {
+      addPeriodicHTML=`<button data-action="openAddPeriodic" style="border:1px dashed #C8D6EC;background:#fff;color:${CLEAN_BLUE};font-weight:600;font-size:13px;letter-spacing:.04em;text-transform:uppercase;padding:12px;border-radius:13px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;">${IC.plus}Nova tarefa periódica</button>`;
+    }
+    bodyHTML=`<div style="display:flex;flex-direction:column;gap:8px;">${tHTML}</div>${addPeriodicHTML}`;
+
+  } else if(sec==='notas'){
+    bodyHTML=`<div style="background:#fff;border:1px solid rgba(26,26,46,.07);border-radius:18px;padding:16px;box-shadow:0 1px 2px rgba(26,26,46,.04);">
+      <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#9A9AB5;font-weight:700;margin-bottom:10px;">Anotações livres</div>
+      <textarea data-action="cleanNotes" rows="12" placeholder="Dicas, rotinas, observações…" style="width:100%;border:none;outline:none;background:transparent;font-size:14.5px;line-height:1.6;color:#1A1A2E;resize:none;">${esc(cl.notes||'')}</textarea>
+    </div>`;
+  }
+
+  return `<div class="page-anim" style="padding:6px 22px 24px;">
+    <h1 style="font-family:'Playfair Display',serif;font-weight:800;font-size:32px;margin:10px 0 18px;letter-spacing:-.01em;">Limpeza</h1>
+    <div style="display:flex;background:${CLEAN_BLUE_SOFT};border-radius:14px;padding:4px;gap:2px;margin-bottom:18px;">${secTabsHTML}</div>
+    ${bodyHTML}
+  </div>`;
+}
+
 // ─── MODAL refeição ───────────────────────────────────────────────────────────
 function renderMealModal(){
   if(!state.mealModal) return '';
@@ -600,8 +834,9 @@ function renderNav(){
     {key:'agua',icon:IC.droplet,label:'Água'},
     {key:'receitas',icon:IC.book,label:'Receitas'},
     {key:'mercado',icon:IC.cart,label:'Mercado'},
+    {key:'limpeza',icon:IC.broom,label:'Limpeza'},
   ];
-  return `<nav style="position:absolute;left:0;right:0;bottom:0;height:72px;background:#fff;border-top:1px solid rgba(26,26,46,.08);box-shadow:0 -4px 16px rgba(26,26,46,.05);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;z-index:20;padding-bottom:env(safe-area-inset-bottom);">${tabs.map(t=>`<button data-action="nav" data-view="${t.key}" style="border:none;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;color:${col(t.key)};">${t.icon}<span style="font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">${t.label}</span></button>`).join('')}</nav>`;
+  return `<nav style="position:absolute;left:0;right:0;bottom:0;height:72px;background:#fff;border-top:1px solid rgba(26,26,46,.08);box-shadow:0 -4px 16px rgba(26,26,46,.05);display:grid;grid-template-columns:repeat(6,1fr);align-items:center;z-index:20;padding-bottom:env(safe-area-inset-bottom);">${tabs.map(t=>`<button data-action="nav" data-view="${t.key}" style="border:none;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;color:${col(t.key)};padding:0;">${t.icon}<span style="font-size:9px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;">${t.label}</span></button>`).join('')}</nav>`;
 }
 
 // ─── Render principal ─────────────────────────────────────────────────────────
@@ -614,6 +849,7 @@ function render(){
   else if(v==='receitas') page=renderReceitas();
   else if(v==='receita') page=renderReceita();
   else if(v==='mercado') page=renderMercado();
+  else if(v==='limpeza') page=renderLimpeza();
 
   document.getElementById('root').innerHTML=`
   <div style="width:100%;max-width:480px;min-height:100vh;background:linear-gradient(180deg,#FFF6F1 0%,#FFFDFB 38%);position:relative;box-shadow:0 0 50px rgba(26,26,46,.10);display:flex;flex-direction:column;overflow:hidden;">
@@ -644,7 +880,7 @@ document.getElementById('root').addEventListener('click', e=>{
 
   if(a==='nav'){
     const v=btn.dataset.view;
-    setState(v==='receitas'?{view:'receitas',editId:null,search:''}:{view:v});
+    setState(v==='receitas'?{view:'receitas',editId:null,search:'',recipeCatFilter:'all'}:{view:v});
   } else if(a==='selDate') setState({selDate:btn.dataset.date});
   else if(a==='prevWeek') setState({selDate:iso(addDays(parseISO(S.selDate),-7))});
   else if(a==='nextWeek') setState({selDate:iso(addDays(parseISO(S.selDate),7))});
@@ -707,6 +943,55 @@ document.getElementById('root').addEventListener('click', e=>{
   } else if(a==='shopToggle'){const key=btn.dataset.cat,id=btn.dataset.id;updateData(d=>{const x=d.shopping[key].find(i=>i.id===id);if(x)x.done=!x.done;});}
   else if(a==='shopDel'){const key=btn.dataset.cat,id=btn.dataset.id;updateData(d=>{d.shopping[key]=d.shopping[key].filter(i=>i.id!==id);});}
   else if(a==='clearDone') updateData(d=>{Object.keys(d.shopping).forEach(k=>{d.shopping[k]=d.shopping[k].filter(i=>!i.done);});});
+  // receitas — categoria, grupo novo
+  else if(a==='recipeCatFilter') setState({recipeCatFilter:btn.dataset.cat});
+  else if(a==='openNewCat') setState({addingNewCat:true,newCatName:''});
+  else if(a==='cancelNewCat') setState({addingNewCat:false,newCatName:''});
+  else if(a==='saveNewCat'){
+    const n=(S.newCatName||'').trim(); if(!n) return;
+    const id='c'+uid();
+    updateData(d=>{if(!d.recipeCategories)d.recipeCategories=[];d.recipeCategories.push({id,name:n});});
+    setState({addingNewCat:false,newCatName:'',recipeCatFilter:id});
+  }
+  else if(a==='recipeSetCat'){
+    const rid=S.editId, cat=btn.dataset.cat||'';
+    updateData(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.category=cat;});
+  }
+  // limpeza — seção
+  else if(a==='cleanSection') setState({cleanSection:btn.dataset.sec,cleanAddDay:null,cleanAddText:'',addingPeriodic:false});
+  // limpeza — semana
+  else if(a==='cleanAddWeekOpen') setState({cleanAddDay:btn.dataset.day,cleanAddText:''});
+  else if(a==='cleanAddCancel') setState({cleanAddDay:null,cleanAddText:''});
+  else if(a==='cleanAddWeekSubmit'){
+    const day=btn.dataset.day, text=(S.cleanAddText||'').trim(); if(!text) return;
+    updateData(d=>{if(!d.cleaning.weekTasks[day])d.cleaning.weekTasks[day]=[];d.cleaning.weekTasks[day].push({id:uid(),text,done:false});});
+    setState({cleanAddDay:null,cleanAddText:''});
+  }
+  else if(a==='cleanToggleWeek'){const day=btn.dataset.day,id=btn.dataset.id;updateData(d=>{const t=d.cleaning.weekTasks[day].find(x=>x.id===id);if(t)t.done=!t.done;});}
+  else if(a==='cleanDelWeek'){const day=btn.dataset.day,id=btn.dataset.id;updateData(d=>{d.cleaning.weekTasks[day]=d.cleaning.weekTasks[day].filter(x=>x.id!==id);});}
+  // limpeza — diárias
+  else if(a==='cleanAddDailyOpen') setState({cleanAddDay:'daily',cleanAddText:''});
+  else if(a==='cleanAddDailySubmit'){
+    const text=(S.cleanAddText||'').trim(); if(!text) return;
+    updateData(d=>{d.cleaning.dailyTasks.push({id:uid(),text,done:false});});
+    setState({cleanAddDay:null,cleanAddText:''});
+  }
+  else if(a==='cleanToggleDaily'){const id=btn.dataset.id;updateData(d=>{const t=d.cleaning.dailyTasks.find(x=>x.id===id);if(t)t.done=!t.done;});}
+  else if(a==='cleanDelDaily'){const id=btn.dataset.id;updateData(d=>{d.cleaning.dailyTasks=d.cleaning.dailyTasks.filter(x=>x.id!==id);});}
+  // limpeza — periódicas
+  else if(a==='openAddPeriodic') setState({addingPeriodic:true,periodicText:'',periodicFreq:'semestral'});
+  else if(a==='cancelAddPeriodic') setState({addingPeriodic:false,periodicText:''});
+  else if(a==='periodicFreqSelect') setState({periodicFreq:btn.dataset.freq});
+  else if(a==='cleanAddPeriodicSubmit'){
+    const text=(S.periodicText||'').trim(); if(!text) return;
+    updateData(d=>{d.cleaning.periodicTasks.push({id:uid(),text,freq:S.periodicFreq||'semestral',lastDone:null,done:false});});
+    setState({addingPeriodic:false,periodicText:''});
+  }
+  else if(a==='cleanTogglePeriodic'){
+    const id=btn.dataset.id;
+    updateData(d=>{const t=d.cleaning.periodicTasks.find(x=>x.id===id);if(t){t.done=!t.done;if(t.done){const now=new Date();t.lastDone=now.getDate()+'/'+(now.getMonth()+1)+'/'+now.getFullYear();}}});
+  }
+  else if(a==='cleanDelPeriodic'){const id=btn.dataset.id;updateData(d=>{d.cleaning.periodicTasks=d.cleaning.periodicTasks.filter(x=>x.id!==id);});}
 });
 
 document.getElementById('root').addEventListener('input', e=>{
@@ -735,9 +1020,12 @@ document.getElementById('root').addEventListener('input', e=>{
   if(action==='recipeName') silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.name=el.value;});
   else if(action==='recipeCal') silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.calories=el.value;});
   else if(action==='recipeNotes') silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.notes=el.value;});
+  else if(action==='recipeServings') silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.servings=el.value;});
+  else if(action==='recipeCost') silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r)r.cost=el.value;});
   else if(action==='ingName'){const iid=el.dataset.id;silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.ingredients.find(i=>i.id===iid);if(x)x.name=el.value;}});}
   else if(action==='ingQty'){const iid=el.dataset.id;silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.ingredients.find(i=>i.id===iid);if(x)x.qty=el.value;}});}
   else if(action==='stepText'){const sid=el.dataset.id;silentSave(d=>{const r=d.recipes.find(x=>x.id===rid);if(r){const x=r.steps.find(s=>s.id===sid);if(x)x.text=el.value;}});}
+  else if(action==='cleanNotes') silentSave(d=>{d.cleaning.notes=el.value;});
 });
 
 function moveMealInType(date,id,type,dir){
